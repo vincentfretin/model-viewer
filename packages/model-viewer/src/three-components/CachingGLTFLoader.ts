@@ -18,6 +18,7 @@ import {DRACOLoader} from 'three/examples/jsm/loaders/DRACOLoader.js';
 import {GLTF, GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {KTX2Loader} from 'three/examples/jsm/loaders/KTX2Loader';
 
+import {MeshoptDecoder} from '../meshopt_decoder.module';
 import ModelViewerElementBase from '../model-viewer-base.js';
 import {CacheEvictionPolicy} from '../utilities/cache-eviction-policy.js';
 
@@ -133,6 +134,7 @@ export class CachingGLTFLoader<T extends GLTFInstanceConstructor =
     super();
     this[$GLTFInstance] = GLTFInstance;
     this[$loader].setDRACOLoader(dracoLoader);
+    this[$loader].setMeshoptDecoder(MeshoptDecoder);
     this[$loader].setKTX2Loader(ktx2Loader);
   }
 
