@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import {BackSide, DoubleSide, FrontSide, Material, Mesh, MeshStandardMaterial, Object3D, Shader, Texture} from 'three';
+import {BackSide, DoubleSide, FrontSide, Material, Mesh, MeshStandardMaterial, Object3D, Shader, Texture, TextureLoader} from 'three';
 import {GLTF} from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import {$clone, $prepare, $preparedGLTF, GLTFInstance, PreparedGLTF} from '../GLTFInstance.js';
@@ -144,9 +144,116 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
           mesh.material = this[$cloneAndPatchMaterial](
               mesh.material as MeshStandardMaterial,
               sourceUUIDToClonedMaterial);
+          if (mesh.parent && mesh.parent.name === 'haircut_generated') {
+            mesh.material.transparent = true;
+            mesh.material.alphaTest = 0;
+            mesh.material.depthWrite = false;
+            mesh.material.needsUpdate = true;
+          }
         }
       }
     });
+
+    const model = clone.scene;
+    const isWoman = model.getObjectByName('outfit_0_lowpoly') ||
+        model.getObjectByName('outfit_2_lowpoly') ||
+        model.getObjectByName('outfit_3_lowpoly');
+    const outfits = [
+      'outfit_0_lowpoly',
+      'outfit_1_lowpoly',
+      'outfit_2_lowpoly',
+      'outfit_3_lowpoly',
+      'outfit_4_lowpoly',
+      'outfit_5_lowpoly'
+    ];
+    // keep outfit_3 by default for woman, outfit_4 for man
+    const outfitObjects =
+        outfits.map((outfit_name) => model.getObjectByName(outfit_name))
+            .filter((o) => !!o);
+    if (outfitObjects.length > 1) {
+      outfitObjects.forEach((outfitObj) => {
+        if (outfitObj &&
+            outfitObj.name !==
+                (isWoman ? 'outfit_2_lowpoly' : 'outfit_4_lowpoly')) {
+          outfitObj.visible = false;
+        }
+      });
+    }
+
+    const visibleOutfit =
+        model.children.find((o) => o.name.startsWith('outfit') && o.visible);
+
+    if (visibleOutfit) {
+      // Ankle and Foot rotation if outfit with high heels
+      if (visibleOutfit.name.startsWith('outfit_0') ||
+          visibleOutfit.name.startsWith('outfit_2')) {
+        // @ts-ignore
+        model.getObjectByName('L_Ankle').rotation.x = 0.35;
+        // @ts-ignore
+        model.getObjectByName('R_Ankle').rotation.x = 0.35;
+        // @ts-ignore
+        model.getObjectByName('L_Foot').rotation.x = -0.35;
+        // @ts-ignore
+        model.getObjectByName('R_Foot').rotation.x = -0.35;
+      } else {
+        // @ts-ignore
+        model.getObjectByName('L_Ankle').rotation.x = 0;
+        // @ts-ignore
+        model.getObjectByName('R_Ankle').rotation.x = 0;
+        // @ts-ignore
+        model.getObjectByName('L_Foot').rotation.x = 0;
+        // @ts-ignore
+        model.getObjectByName('R_Foot').rotation.x = 0;
+      }
+
+      let mesh = model.getObjectByName('mesh');
+      if (mesh && mesh.type !== 'SkinnedMesh')
+        mesh = mesh.children[0];
+      if (mesh) {
+        const loader = new TextureLoader();
+        const outfitName =
+            visibleOutfit.name.replace('_lowpoly', '_body_visibility_mask.png');
+        loader.load(
+            `/avatars/outfits/${outfitName}`,
+            function(texture) {
+              // @ts-ignore
+              const skinTexture = mesh.material.map;
+              // @ts-ignore
+              mesh.material.alphaMap = texture;
+              // @ts-ignore
+              mesh.material.alphaTest = 0.2;
+              texture.flipY = false;
+              texture.offset.copy(skinTexture.offset);
+              texture.repeat.copy(skinTexture.repeat);
+              texture.needsUpdate = true;
+              // @ts-ignore
+              mesh.material.needsUpdate = true;
+            },
+        );
+        const nloader = new TextureLoader();
+        const normalMap =
+            visibleOutfit.name.replace('_lowpoly', '_normal_map.jpg');
+        nloader.load(
+            `/avatars/outfits/${normalMap}`,
+            function(texture) {
+              let outfit = visibleOutfit;
+              if (outfit.type !== 'SkinnedMesh')
+                outfit = outfit.children[0];
+              // @ts-ignore
+              const outfitTexture = outfit.material.map;
+              // @ts-ignore
+              outfit.material.normalMap = texture;
+              // @ts-ignore
+              outfit.material.needsUpdate = true;
+              texture.flipY = false;
+              texture.offset.copy(outfitTexture.offset);
+              texture.repeat.copy(outfitTexture.repeat);
+              texture.needsUpdate = true;
+            },
+        );
+      }
+    }
+
 
     // Cross-correlate the scene graph by relying on information in the
     // current scene graph; without this step, relationships between the
