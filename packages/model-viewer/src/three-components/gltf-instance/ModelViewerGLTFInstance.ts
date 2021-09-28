@@ -184,6 +184,8 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
         model.children.find((o) => o.name.startsWith('outfit') && o.visible);
 
     if (visibleOutfit) {
+      // Keep the avatar invisible until we load the body visibility mask.
+      model.visible = false;
       // Ankle and Foot rotation if outfit with high heels
       if (visibleOutfit.name.startsWith('outfit_0') ||
           visibleOutfit.name.startsWith('outfit_2')) {
@@ -228,6 +230,7 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
               texture.needsUpdate = true;
               // @ts-ignore
               mesh.material.needsUpdate = true;
+              model.visible = true;
             },
         );
         const nloader = new TextureLoader();
