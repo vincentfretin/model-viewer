@@ -166,15 +166,16 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
       'outfit_4_lowpoly',
       'outfit_5_lowpoly'
     ];
-    // keep outfit_3 by default for woman, outfit_4 for man
+    // keep outfit_2 by default for woman, outfit_4 for man
+    const defaultOutfit = isWoman ? 'outfit_2_lowpoly' : 'outfit_4_lowpoly';
+    const qs = new URLSearchParams(location.search);
+    const selectedOutfit = qs.get('outfit') || defaultOutfit;
     const outfitObjects =
         outfits.map((outfit_name) => model.getObjectByName(outfit_name))
             .filter((o) => !!o);
     if (outfitObjects.length > 1) {
       outfitObjects.forEach((outfitObj) => {
-        if (outfitObj &&
-            outfitObj.name !==
-                (isWoman ? 'outfit_2_lowpoly' : 'outfit_4_lowpoly')) {
+        if (outfitObj && outfitObj.name !== selectedOutfit) {
           outfitObj.visible = false;
         }
       });
