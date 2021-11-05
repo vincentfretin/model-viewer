@@ -169,7 +169,13 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
     // keep outfit_2 by default for woman, outfit_4 for man
     const defaultOutfit = isWoman ? 'outfit_2_lowpoly' : 'outfit_4_lowpoly';
     const qs = new URLSearchParams(location.search);
-    const selectedOutfit = qs.get('outfit') || defaultOutfit;
+    let selectedOutfit = qs.get('outfit') || defaultOutfit;
+    let selectedOutfitVariant = null;
+    const selectedOutfitParts = selectedOutfit.split('|');
+    if (selectedOutfitParts.length === 2) {
+      selectedOutfit = selectedOutfitParts[0];
+      selectedOutfitVariant = selectedOutfitParts[1];
+    }
     const outfitObjects =
         outfits.map((outfit_name) => model.getObjectByName(outfit_name))
             .filter((o) => !!o);
@@ -234,15 +240,17 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
               model.visible = true;
             },
         );
+
+        let outfit = visibleOutfit;
+        if (outfit.type !== 'SkinnedMesh')
+          outfit = outfit.children[0];
+
         const nloader = new TextureLoader();
         const normalMap =
             visibleOutfit.name.replace('_lowpoly', '_normal_map.jpg');
         nloader.load(
             `/avatars/outfits/${normalMap}`,
             function(texture) {
-              let outfit = visibleOutfit;
-              if (outfit.type !== 'SkinnedMesh')
-                outfit = outfit.children[0];
               // @ts-ignore
               const outfitTexture = outfit.material.map;
               // @ts-ignore
@@ -255,6 +263,28 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
               texture.needsUpdate = true;
             },
         );
+
+        if (selectedOutfitVariant) {
+          const outfitLoader = new TextureLoader();
+          const outfitTextureFile = visibleOutfit.name.replace(
+              '_lowpoly', `_v${selectedOutfitVariant}.jpg`);
+          outfitLoader.load(
+              `/avatars/outfits/${outfitTextureFile}`,
+              function(texture) {
+                // @ts-ignore
+                const outfitTexture = outfit.material.map;
+                // @ts-ignore
+                outfit.material.map = texture;
+                // @ts-ignore
+                outfit.material.needsUpdate = true;
+                texture.flipY = false;
+                texture.offset.copy(outfitTexture.offset);
+                texture.repeat.copy(outfitTexture.repeat);
+                texture.needsUpdate = true;
+                outfitTexture.dispose();
+              },
+          );
+        }
       }
     }
 
