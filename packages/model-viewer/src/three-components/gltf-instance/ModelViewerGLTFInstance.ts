@@ -219,51 +219,12 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
       if (mesh && mesh.type !== 'SkinnedMesh')
         mesh = mesh.children[0];
       if (mesh) {
-        const loader = new TextureLoader();
-        const outfitName =
-            visibleOutfit.name.replace('_lowpoly', '_body_visibility_mask.png');
-        loader.load(
-            `/avatars/outfits/${outfitName}`,
-            function(texture) {
-              // @ts-ignore
-              const skinTexture = mesh.material.map;
-              // @ts-ignore
-              mesh.material.alphaMap = texture;
-              // @ts-ignore
-              mesh.material.alphaTest = 0.2;
-              texture.flipY = false;
-              texture.offset.copy(skinTexture.offset);
-              texture.repeat.copy(skinTexture.repeat);
-              texture.needsUpdate = true;
-              // @ts-ignore
-              mesh.material.needsUpdate = true;
-              model.visible = true;
-            },
-        );
-
         let outfit = visibleOutfit;
         if (outfit.type !== 'SkinnedMesh')
           outfit = outfit.children[0];
-
-        const nloader = new TextureLoader();
-        const normalMap =
-            visibleOutfit.name.replace('_lowpoly', '_normal_map.jpg');
-        nloader.load(
-            `/avatars/outfits/${normalMap}`,
-            function(texture) {
-              // @ts-ignore
-              const outfitTexture = outfit.material.map;
-              // @ts-ignore
-              outfit.material.normalMap = texture;
-              // @ts-ignore
-              outfit.material.needsUpdate = true;
-              texture.flipY = false;
-              texture.offset.copy(outfitTexture.offset);
-              texture.repeat.copy(outfitTexture.repeat);
-              texture.needsUpdate = true;
-            },
-        );
-
+        const loader = new TextureLoader();
+        let bodyVisibilityMaskLoaded = false;
+        let outfitVariantLoaded = selectedOutfitVariant ? false : true;
         if (selectedOutfitVariant) {
           const outfitLoader = new TextureLoader();
           const outfitTextureFile = visibleOutfit.name.replace(
@@ -282,9 +243,65 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
                 texture.repeat.copy(outfitTexture.repeat);
                 texture.needsUpdate = true;
                 outfitTexture.dispose();
+                outfitVariantLoaded = true;
+                if (bodyVisibilityMaskLoaded) {
+                  model.visible = true;
+                }
               },
           );
         }
+        const outfitName =
+            visibleOutfit.name.replace('_lowpoly', '_body_visibility_mask.png');
+        loader.load(
+            `/avatars/outfits/${outfitName}`,
+            function(texture) {
+              // @ts-ignore
+              const skinTexture = mesh.material.map;
+              // @ts-ignore
+              if (mesh.material.alphaMap) {
+                // @ts-ignore
+                mesh.material.alphaMap.dispose();
+              }
+              // @ts-ignore
+              mesh.material.alphaMap = texture;
+              // @ts-ignore
+              mesh.material.alphaTest = 0.2;
+              texture.flipY = false;
+              texture.offset.copy(skinTexture.offset);
+              texture.repeat.copy(skinTexture.repeat);
+              texture.needsUpdate = true;
+              // @ts-ignore
+              mesh.material.needsUpdate = true;
+              bodyVisibilityMaskLoaded = true;
+              if (outfitVariantLoaded) {
+                model.visible = true;
+              }
+            },
+        );
+
+        const nloader = new TextureLoader();
+        const normalMap =
+            visibleOutfit.name.replace('_lowpoly', '_normal_map.jpg');
+        nloader.load(
+            `/avatars/outfits/${normalMap}`,
+            function(texture) {
+              // @ts-ignore
+              const outfitTexture = outfit.material.map;
+              // @ts-ignore
+              if (outfit.material.normalMap) {
+                // @ts-ignore
+                outfit.material.normalMap.dispose();
+              }
+              // @ts-ignore
+              outfit.material.normalMap = texture;
+              // @ts-ignore
+              outfit.material.needsUpdate = true;
+              texture.flipY = false;
+              texture.offset.copy(outfitTexture.offset);
+              texture.repeat.copy(outfitTexture.repeat);
+              texture.needsUpdate = true;
+            },
+        );
       }
     }
 
