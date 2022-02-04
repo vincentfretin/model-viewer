@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import {BackSide, DoubleSide, FrontSide, Material, Mesh, MeshStandardMaterial, Object3D, Shader, Texture, TextureLoader} from 'three';
+import {BackSide, DoubleSide, FrontSide, Material, Mesh, MeshStandardMaterial, Object3D, Shader, sRGBEncoding, Texture, TextureLoader} from 'three';
 import {GLTF} from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import {$clone, $prepare, $preparedGLTF, GLTFInstance, PreparedGLTF} from '../GLTFInstance.js';
@@ -238,6 +238,7 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
                 outfit.material.map = texture;
                 // @ts-ignore
                 outfit.material.needsUpdate = true;
+                texture.encoding = sRGBEncoding;
                 texture.flipY = false;
                 texture.offset.copy(outfitTexture.offset);
                 texture.repeat.copy(outfitTexture.repeat);
@@ -266,6 +267,7 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
               mesh.material.alphaMap = texture;
               // @ts-ignore
               mesh.material.alphaTest = 0.2;
+              texture.encoding = sRGBEncoding;
               texture.flipY = false;
               texture.offset.copy(skinTexture.offset);
               texture.repeat.copy(skinTexture.repeat);
@@ -296,6 +298,7 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
               outfit.material.normalMap = texture;
               // @ts-ignore
               outfit.material.needsUpdate = true;
+              texture.encoding = sRGBEncoding;
               texture.flipY = false;
               texture.offset.copy(outfitTexture.offset);
               texture.repeat.copy(outfitTexture.repeat);
