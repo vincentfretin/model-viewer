@@ -158,14 +158,23 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
     const model = clone.scene;
     const isWoman = model.getObjectByName('outfit_0_lowpoly') ||
         model.getObjectByName('outfit_2_lowpoly') ||
-        model.getObjectByName('outfit_3_lowpoly');
+        model.getObjectByName('outfit_3_lowpoly') ||
+        model.getObjectByName('outfit_meta_0_lowpoly') ||
+        model.getObjectByName('outfit_meta_2_lowpoly') ||
+        model.getObjectByName('outfit_meta_3_lowpoly');
     const outfits = [
       'outfit_0_lowpoly',
       'outfit_1_lowpoly',
       'outfit_2_lowpoly',
       'outfit_3_lowpoly',
       'outfit_4_lowpoly',
-      'outfit_5_lowpoly'
+      'outfit_5_lowpoly',
+      'outfit_meta_0_lowpoly',
+      'outfit_meta_1_lowpoly',
+      'outfit_meta_2_lowpoly',
+      'outfit_meta_3_lowpoly',
+      'outfit_meta_4_lowpoly',
+      'outfit_meta_5_lowpoly',
     ];
     // keep outfit_2 by default for woman, outfit_4 for man
     const defaultOutfit = isWoman ? 'outfit_2_lowpoly' : 'outfit_4_lowpoly';
@@ -177,8 +186,15 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
       selectedOutfit = selectedOutfitParts[0];
       selectedOutfitVariant = selectedOutfitParts[1];
     }
+    const isFitPerson = !!model.getObjectByName('L_Hip');
+    const isMetaPerson = !!model.getObjectByName('RootNode');
+    if (isMetaPerson) {
+      // L_Hip is a bone of FitPerson, otherwise it's a MetaPerson, add the
+      // meta_ prefix
+      selectedOutfit = selectedOutfit.replace('outfit_', 'outfit_meta_');
+    }
     const outfitObjects =
-        outfits.map((outfit_name) => model.getObjectByName(outfit_name))
+        outfits.map((outfitName) => model.getObjectByName(outfitName))
             .filter((o) => !!o);
     if (outfitObjects.length > 1) {
       outfitObjects.forEach((outfitObj) => {
@@ -207,26 +223,28 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
     if (visibleOutfit) {
       // Keep the avatar invisible until we load the body visibility mask.
       model.visible = false;
-      // Ankle and Foot rotation if outfit with high heels
-      if (visibleOutfit.name.startsWith('outfit_0') ||
-          visibleOutfit.name.startsWith('outfit_2')) {
-        // @ts-ignore
-        model.getObjectByName('L_Ankle').rotation.x = 0.35;
-        // @ts-ignore
-        model.getObjectByName('R_Ankle').rotation.x = 0.35;
-        // @ts-ignore
-        model.getObjectByName('L_Foot').rotation.x = -0.35;
-        // @ts-ignore
-        model.getObjectByName('R_Foot').rotation.x = -0.35;
-      } else {
-        // @ts-ignore
-        model.getObjectByName('L_Ankle').rotation.x = 0;
-        // @ts-ignore
-        model.getObjectByName('R_Ankle').rotation.x = 0;
-        // @ts-ignore
-        model.getObjectByName('L_Foot').rotation.x = 0;
-        // @ts-ignore
-        model.getObjectByName('R_Foot').rotation.x = 0;
+      if (isFitPerson) {
+        // Ankle and Foot rotation if outfit with high heels
+        if (visibleOutfit.name.startsWith('outfit_0') ||
+            visibleOutfit.name.startsWith('outfit_2')) {
+          // @ts-ignore
+          model.getObjectByName('L_Ankle').rotation.x = 0.35;
+          // @ts-ignore
+          model.getObjectByName('R_Ankle').rotation.x = 0.35;
+          // @ts-ignore
+          model.getObjectByName('L_Foot').rotation.x = -0.35;
+          // @ts-ignore
+          model.getObjectByName('R_Foot').rotation.x = -0.35;
+        } else {
+          // @ts-ignore
+          model.getObjectByName('L_Ankle').rotation.x = 0;
+          // @ts-ignore
+          model.getObjectByName('R_Ankle').rotation.x = 0;
+          // @ts-ignore
+          model.getObjectByName('L_Foot').rotation.x = 0;
+          // @ts-ignore
+          model.getObjectByName('R_Foot').rotation.x = 0;
+        }
       }
 
       let mesh = model.getObjectByName('mesh');
@@ -241,8 +259,10 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
         let outfitVariantLoaded = selectedOutfitVariant ? false : true;
         if (selectedOutfitVariant) {
           const outfitLoader = new TextureLoader();
-          const outfitTextureFile = visibleOutfit.name.replace(
-              '_lowpoly', `_v${selectedOutfitVariant}.jpg`);
+          const outfitTextureFile =
+              visibleOutfit.name
+                  .replace('_lowpoly', `_v${selectedOutfitVariant}.jpg`)
+                  .replace('_meta', '');
           outfitLoader.load(
               `/avatars/outfits/${outfitTextureFile}`,
               function(texture) {
@@ -265,7 +285,8 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
               },
           );
         }
-        const outfitName =
+        const outfitName = visibleOutfit.name.indexOf('_meta') > -1 ?
+            visibleOutfit.name + '_body_visibility_mask.webp' :
             visibleOutfit.name.replace('_lowpoly', '_body_visibility_mask.png');
         loader.load(
             `/avatars/outfits/${outfitName}`,
@@ -296,7 +317,8 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
         );
 
         const nloader = new TextureLoader();
-        const normalMap =
+        const normalMap = visibleOutfit.name.indexOf('_meta') > -1 ?
+            visibleOutfit.name + '_normal_map.webp' :
             visibleOutfit.name.replace('_lowpoly', '_normal_map.jpg');
         nloader.load(
             `/avatars/outfits/${normalMap}`,
