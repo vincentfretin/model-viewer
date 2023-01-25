@@ -145,8 +145,9 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
               mesh.material as MeshStandardMaterial,
               sourceUUIDToClonedMaterial);
           if (mesh.parent && mesh.parent.name === 'haircut_generated') {
+            mesh.material.alphaTest =
+                0;  // specific to model viewer that change the value
             mesh.material.transparent = true;
-            mesh.material.alphaTest = 0;
             mesh.material.depthWrite = false;
             mesh.material.needsUpdate = true;
           }
@@ -181,9 +182,22 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
             .filter((o) => !!o);
     if (outfitObjects.length > 1) {
       outfitObjects.forEach((outfitObj) => {
-        if (outfitObj && outfitObj.name !== selectedOutfit) {
-          outfitObj.visible = false;
-        }
+        if (!outfitObj)
+          return;
+        outfitObj.visible = outfitObj.name === selectedOutfit;
+        // New generated avatars have now depthWrite false and transparent true
+        // wrongly set on outfit_meta_1_lowpoly and outfit_meta_4_lowpoly for
+        // man. Be sure to revert that.
+        if (outfitObj.type !== 'SkinnedMesh')
+          outfitObj = outfitObj.children[0];
+        // @ts-ignore
+        outfitObj.material.alphaTest = 0;
+        // @ts-ignore
+        outfitObj.material.transparent = false;
+        // @ts-ignore
+        outfitObj.material.depthWrite = true;
+        // @ts-ignore
+        outfitObj.material.needsUpdate = true;
       });
     }
 
