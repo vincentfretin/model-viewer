@@ -246,6 +246,30 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
           model.getObjectByName('R_Foot').rotation.x = 0;
         }
       }
+      if (isMetaPerson) {
+        // @ts-ignore
+        const lShoulder = model.getObjectByName('LeftShoulder');
+        // @ts-ignore
+        const rShoulder = model.getObjectByName('RightShoulder');
+        // @ts-ignore
+        const lArm = model.getObjectByName('LeftArm');
+        // @ts-ignore
+        const rArm = model.getObjectByName('RightArm');
+        if (lShoulder && rShoulder && lArm && rArm) {
+          // @ts-ignore
+          lShoulder.rotation.set(
+              1.529591413270602, -0.1685597219479182, -1.4382781866770025);
+          // @ts-ignore
+          lArm.rotation.set(
+              1.2301263993071454, 0.5009548453080749, -0.11979616310890634);
+          // @ts-ignore
+          rShoulder.rotation.set(
+              1.539083127857416, 0.24816855335072086, 1.5089718233866178);
+          // @ts-ignore
+          rArm.rotation.set(
+              1.0119602384597257, -0.7067543561093879, 0.056597673806498765);
+        }
+      }
 
       let mesh = model.getObjectByName('mesh');
       if (mesh && mesh.type !== 'SkinnedMesh')
