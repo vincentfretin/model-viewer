@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import {FrontSide, Material, Mesh, MeshStandardMaterial, Object3D, Sphere} from 'three';
+import {FrontSide, Material, Mesh, MeshStandardMaterial, Object3D, Sphere, sRGBEncoding, TextureLoader} from 'three';
 import {GLTF} from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import {$clone, $prepare, $preparedGLTF, GLTFInstance, PreparedGLTF} from '../GLTFInstance.js';
@@ -131,9 +131,228 @@ export class ModelViewerGLTFInstance extends GLTFInstance {
 
           mesh.material = material.clone() as MeshStandardMaterial;
           sourceUUIDToClonedMaterial.set(material.uuid, mesh.material);
+          if (mesh.parent && mesh.parent.name === 'haircut_generated') {
+            mesh.material.alphaTest = 0; // specific to model viewer that change the value
+            mesh.material.transparent = true;
+            mesh.material.depthWrite = false;
+            mesh.material.needsUpdate = true;
+          }
         }
       }
     });
+
+    const model = clone.scene;
+    const isWoman = model.getObjectByName('outfit_0_lowpoly') ||
+        model.getObjectByName('outfit_2_lowpoly') ||
+        model.getObjectByName('outfit_3_lowpoly') ||
+        model.getObjectByName('outfit_meta_0_lowpoly') ||
+        model.getObjectByName('outfit_meta_2_lowpoly') ||
+        model.getObjectByName('outfit_meta_3_lowpoly');
+    const outfits = [
+      'outfit_0_lowpoly',
+      'outfit_1_lowpoly',
+      'outfit_2_lowpoly',
+      'outfit_3_lowpoly',
+      'outfit_4_lowpoly',
+      'outfit_5_lowpoly',
+      'outfit_meta_0_lowpoly',
+      'outfit_meta_1_lowpoly',
+      'outfit_meta_2_lowpoly',
+      'outfit_meta_3_lowpoly',
+      'outfit_meta_4_lowpoly',
+      'outfit_meta_5_lowpoly',
+    ];
+    // keep outfit_2 by default for woman, outfit_4 for man
+    const defaultOutfit = isWoman ? 'outfit_2_lowpoly' : 'outfit_4_lowpoly';
+    const qs = new URLSearchParams(location.search);
+    let selectedOutfit = qs.get('outfit') || defaultOutfit;
+    let selectedOutfitVariant = null;
+    const selectedOutfitParts = selectedOutfit.split('|');
+    if (selectedOutfitParts.length === 2) {
+      selectedOutfit = selectedOutfitParts[0];
+      selectedOutfitVariant = selectedOutfitParts[1];
+    }
+    const isFitPerson = !!model.getObjectByName('L_Hip');
+    const isMetaPerson = !!model.getObjectByName('RootNode');
+    if (isMetaPerson) {
+      // L_Hip is a bone of FitPerson, otherwise it's a MetaPerson, add the
+      // meta_ prefix
+      selectedOutfit = selectedOutfit.replace('outfit_', 'outfit_meta_');
+    }
+    const outfitObjects =
+        outfits.map((outfitName) => model.getObjectByName(outfitName))
+            .filter((o) => !!o);
+    if (outfitObjects.length > 1) {
+      outfitObjects.forEach((outfitObj) => {
+        if (!outfitObj)
+          return;
+        outfitObj.visible = outfitObj.name === selectedOutfit;
+        // New generated avatars have now depthWrite false and transparent true
+        // wrongly set on outfit_meta_1_lowpoly and outfit_meta_4_lowpoly for
+        // man. Be sure to revert that.
+        if (outfitObj.type !== 'SkinnedMesh')
+          outfitObj = outfitObj.children[0];
+        // @ts-ignore
+        outfitObj.material.alphaTest = 0;
+        // @ts-ignore
+        outfitObj.material.transparent = false;
+        // @ts-ignore
+        outfitObj.material.depthWrite = true;
+        // @ts-ignore
+        outfitObj.material.needsUpdate = true;
+      });
+    }
+
+    const visibleOutfit =
+        model.children.find((o) => o.name.startsWith('outfit') && o.visible);
+
+    if (visibleOutfit) {
+      // Keep the avatar invisible until we load the body visibility mask.
+      model.visible = true; // we can't use false anymore here otherwise the camera view is wrong
+      if (isFitPerson) {
+        // Ankle and Foot rotation if outfit with high heels
+        if (visibleOutfit.name.startsWith('outfit_0') ||
+            visibleOutfit.name.startsWith('outfit_2')) {
+          // @ts-ignore
+          model.getObjectByName('L_Ankle').rotation.x = 0.35;
+          // @ts-ignore
+          model.getObjectByName('R_Ankle').rotation.x = 0.35;
+          // @ts-ignore
+          model.getObjectByName('L_Foot').rotation.x = -0.35;
+          // @ts-ignore
+          model.getObjectByName('R_Foot').rotation.x = -0.35;
+        } else {
+          // @ts-ignore
+          model.getObjectByName('L_Ankle').rotation.x = 0;
+          // @ts-ignore
+          model.getObjectByName('R_Ankle').rotation.x = 0;
+          // @ts-ignore
+          model.getObjectByName('L_Foot').rotation.x = 0;
+          // @ts-ignore
+          model.getObjectByName('R_Foot').rotation.x = 0;
+        }
+      }
+      if (isMetaPerson) {
+        // @ts-ignore
+        const lShoulder = model.getObjectByName('LeftShoulder');
+        // @ts-ignore
+        const rShoulder = model.getObjectByName('RightShoulder');
+        // @ts-ignore
+        const lArm = model.getObjectByName('LeftArm');
+        // @ts-ignore
+        const rArm = model.getObjectByName('RightArm');
+        if (lShoulder && rShoulder && lArm && rArm) {
+          // @ts-ignore
+          lShoulder.rotation.set(
+              1.529591413270602, -0.1685597219479182, -1.4382781866770025);
+          // @ts-ignore
+          lArm.rotation.set(
+              1.2301263993071454, 0.5009548453080749, -0.11979616310890634);
+          // @ts-ignore
+          rShoulder.rotation.set(
+              1.539083127857416, 0.24816855335072086, 1.5089718233866178);
+          // @ts-ignore
+          rArm.rotation.set(
+              1.0119602384597257, -0.7067543561093879, 0.056597673806498765);
+        }
+      }
+
+      let mesh = model.getObjectByName('mesh');
+      if (mesh && mesh.type !== 'SkinnedMesh')
+        mesh = mesh.children[0];
+      if (mesh) {
+        let outfit = visibleOutfit;
+        if (outfit.type !== 'SkinnedMesh')
+          outfit = outfit.children[0];
+        const loader = new TextureLoader();
+        let bodyVisibilityMaskLoaded = false;
+        let outfitVariantLoaded = selectedOutfitVariant ? false : true;
+        if (selectedOutfitVariant) {
+          const outfitLoader = new TextureLoader();
+          const outfitTextureFile =
+              visibleOutfit.name
+                  .replace('_lowpoly', `_v${selectedOutfitVariant}.jpg`)
+                  .replace('_meta', '');
+          outfitLoader.load(
+              `/avatars/outfits/${outfitTextureFile}`,
+              function(texture) {
+                // @ts-ignore
+                const outfitTexture = outfit.material.map;
+                // @ts-ignore
+                outfit.material.map = texture;
+                // @ts-ignore
+                outfit.material.needsUpdate = true;
+                texture.encoding = sRGBEncoding;
+                texture.flipY = false;
+                texture.offset.copy(outfitTexture.offset);
+                texture.repeat.copy(outfitTexture.repeat);
+                texture.needsUpdate = true;
+                outfitTexture.dispose();
+                outfitVariantLoaded = true;
+                if (bodyVisibilityMaskLoaded) {
+                  model.visible = true;
+                }
+              },
+          );
+        }
+        const outfitName = visibleOutfit.name.indexOf('_meta') > -1 ?
+            visibleOutfit.name + '_body_visibility_mask.webp' :
+            visibleOutfit.name.replace('_lowpoly', '_body_visibility_mask.png');
+        loader.load(
+            `/avatars/outfits/${outfitName}`,
+            function(texture) {
+              // @ts-ignore
+              const skinTexture = mesh.material.map;
+              // @ts-ignore
+              if (mesh.material.alphaMap) {
+                // @ts-ignore
+                mesh.material.alphaMap.dispose();
+              }
+              // @ts-ignore
+              mesh.material.alphaMap = texture;
+              // @ts-ignore
+              mesh.material.alphaTest = 0.2;
+              texture.encoding = sRGBEncoding;
+              texture.flipY = false;
+              texture.offset.copy(skinTexture.offset);
+              texture.repeat.copy(skinTexture.repeat);
+              texture.needsUpdate = true;
+              // @ts-ignore
+              mesh.material.needsUpdate = true;
+              bodyVisibilityMaskLoaded = true;
+              if (outfitVariantLoaded) {
+                model.visible = true;
+              }
+            },
+        );
+
+        const nloader = new TextureLoader();
+        const normalMap = visibleOutfit.name.indexOf('_meta') > -1 ?
+            visibleOutfit.name + '_normal_map.webp' :
+            visibleOutfit.name.replace('_lowpoly', '_normal_map.jpg');
+        nloader.load(
+            `/avatars/outfits/${normalMap}`,
+            function(texture) {
+              // @ts-ignore
+              const outfitTexture = outfit.material.map;
+              // @ts-ignore
+              if (outfit.material.normalMap) {
+                // @ts-ignore
+                outfit.material.normalMap.dispose();
+              }
+              // @ts-ignore
+              outfit.material.normalMap = texture;
+              // @ts-ignore
+              outfit.material.needsUpdate = true;
+              texture.encoding = sRGBEncoding;
+              texture.flipY = false;
+              texture.offset.copy(outfitTexture.offset);
+              texture.repeat.copy(outfitTexture.repeat);
+              texture.needsUpdate = true;
+            },
+        );
+      }
+    }
 
     // Cross-correlate the scene graph by relying on information in the
     // current scene graph; without this step, relationships between the
