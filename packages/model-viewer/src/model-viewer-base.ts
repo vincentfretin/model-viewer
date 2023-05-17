@@ -216,6 +216,11 @@ export default class ModelViewerElementBase extends ReactiveElement {
   }
 
   /** @export */
+  get renderer() {
+    return Renderer.singleton;
+  }
+
+  /** @export */
   get modelIsVisible() {
     return this[$getModelIsVisible]();
   }
