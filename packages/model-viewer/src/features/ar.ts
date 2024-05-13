@@ -440,13 +440,19 @@ configuration or device capabilities');
 
       updateSourceProgress(0.2);
 
+      // QuickLook places the model on floor or wall correctly when
+      // the usdz doesn't contain the anchoring and planeAnchoring properties.
+      const usdzOptions = this.arPlacement === 'wall' ?
+        {includeAnchoringProperties: false, quickLookCompatible: true} :
+        {quickLookCompatible: true};
+
       const exporter = new USDZExporter();
 
       target.remove(model);
       model.position.copy(target.position);
       model.updateWorldMatrix(false, true);
 
-      const arraybuffer = await exporter.parse(model);
+      const arraybuffer = await exporter.parse(model, usdzOptions);
 
       model.position.set(0, 0, 0);
       target.add(model);
