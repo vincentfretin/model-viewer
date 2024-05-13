@@ -27,6 +27,14 @@ let isSceneViewerBlocked = false;
 const noArViewerSigil = '#model-viewer-no-ar-fallback';
 
 export type ARMode = 'quick-look'|'scene-viewer'|'webxr'|'none';
+// TODO PR to be done in https://github.com/three-types/DefinitelyTyped/blob/master/types/three/examples/jsm/exporters/USDZExporter.d.ts
+// once the patch to be able to use {includeAnchoringProperties: false} is merged in three.js repo.
+interface USDZExporterOptions {
+    ar?: { anchoring: { type: 'plane' }, planeAnchoring: { alignment: 'horizontal' | 'vertical' | 'any' } };
+    includeAnchoringProperties?: boolean;
+    quickLookCompatible?: boolean;
+    maxTextureSize?: number;
+}
 
 const deserializeARModes = enumerationDeserializer<ARMode>(
     ['quick-look', 'scene-viewer', 'webxr', 'none']);
@@ -442,7 +450,7 @@ configuration or device capabilities');
 
       // QuickLook places the model on floor or wall correctly when
       // the usdz doesn't contain the anchoring and planeAnchoring properties.
-      const usdzOptions = this.arPlacement === 'wall' ?
+      const usdzOptions: USDZExporterOptions = this.arPlacement === 'wall' ?
         {includeAnchoringProperties: false, quickLookCompatible: true} :
         {quickLookCompatible: true};
 
